@@ -2,6 +2,10 @@
 // Code to run a Teensy based audio guest book for a wedding
 // Based on https://www.youtube.com/watch?v=dI6ielrP1SE
 // Adapted and customized by Mark Strendin
+//
+// Convert mp3s to wav files using this website because
+// audacity files don't seem to work
+// https://cloudconvert.com/mp3-to-wav
 
 // Includes
 #include <Audio.h>
