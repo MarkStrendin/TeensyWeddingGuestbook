@@ -5,6 +5,12 @@
 
 // Includes
 #include <Audio.h>
+#include <SPI.h>
+#include <SD.h>
+
+// ***********************************************************
+// * Defines
+// ***********************************************************
 
 // Which pin should we check to see if the receiver
 // is still "on hook" or not?
@@ -13,8 +19,18 @@
 // Pin for the indicator LED
 #define LED_PIN 13
 
+// How loud should the beeps be
 #define BEEP_VOLUME 0.1
 
+// Which pins to use for SDCard bits
+#define SDCARD_CS_PIN    10
+#define SDCARD_MOSI_PIN  7
+#define SDCARD_SCK_PIN   14
+
+
+// ***********************************************************
+// * Globals
+// ***********************************************************
 enum Mode {Init, Ready, Prompting, Recording};
 Mode system_mode = Mode::Init;
 
@@ -28,11 +44,24 @@ AudioInputI2S  shield_mic;
 
 // Set up audio path for beeps
 AudioSynthWaveform    sndBeep;
-AudioConnection       patchCord1(sndBeep, 0, audio_jack, 0);
-AudioConnection       patchCord2(sndBeep, 0, audio_jack, 1);
 
 // Set up audio file for the prompt
 AudioPlaySdWav sndGreeting;
+
+// Set up virtual audio cables
+AudioMixer4 audioMixer;
+AudioConnection patchCord_mixer_out_1(audioMixer, 0, audio_jack, 0);
+AudioConnection patchCord_mixer_out_2(audioMixer, 0, audio_jack, 1);
+
+AudioConnection patchCord1(sndBeep, 0, audioMixer, 0);
+AudioConnection patchCord4(sndGreeting, 0, audioMixer, 1);
+
+
+
+
+// ***********************************************************
+// * Functions
+// ***********************************************************
 
 boolean is_phone_off_hook() {
   if (digitalRead(HOOK_BUTTON_PIN) == LOW) {
@@ -41,10 +70,9 @@ boolean is_phone_off_hook() {
     return false;
   }
 }
-
 void beep_start_recording() {
   sndBeep.begin(BEEP_VOLUME, 825, WAVEFORM_SINE);
-  delay(350);
+  delay(800);
   sndBeep.amplitude(0);
 }
 
@@ -58,6 +86,25 @@ void beep_end_recording() {
   sndBeep.amplitude(0);
 }
 
+void playFile(const char *filename)
+{
+  Serial.print("Playing file: ");
+  Serial.println(filename);
+
+  // Start playing the file.  This sketch continues to
+  // run while the file plays.
+  sndGreeting.play(filename);
+
+  // A brief delay for the library read WAV info
+  delay(5);
+
+  // Simply wait for the file to finish playing.
+  while (sndGreeting.isPlaying()) {}
+}
+
+// ***********************************************************
+// * Setup
+// ***********************************************************
 void setup() {
   Serial.begin(9600);  
   system_mode = Mode::Init;
@@ -67,6 +114,10 @@ void setup() {
 
   // set up audio system
   AudioMemory(60);
+  
+  audioMixer.gain(0, 1.0f);
+  audioMixer.gain(1, 1.0f);
+
   audio_shield_board.enable();
   audio_shield_board.volume(1.0);
   audio_shield_board.inputSelect(AUDIO_INPUT_MIC);
@@ -78,7 +129,23 @@ void setup() {
 
 
   // Set up SD card
-
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  if (!(SD.begin(SDCARD_CS_PIN))) 
+  {    
+    while (1) {
+      Serial.println("Unable to access the SD card");
+      delay(500);
+    }
+  } else {
+    Serial.println("SD card correctly initialized");    
+  } 
+  /*
+  MTP.begin();
+  MTP.addFilesystem(SD, "TeleGuestbook");
+  Serial.println("Added SD card via MTP");
+  MTPcheckInterval = MTP.storage()->get_DeltaDeviceCheckTimeMS();
+*/
 
   // Set system to Ready
   system_mode = Mode::Ready;
@@ -91,6 +158,13 @@ String get_hook_status() {
     return "ON Hook";
   }
 }
+
+
+
+
+// ***********************************************************
+// * LOOP
+// ***********************************************************
 
 void loop() {  
   // See if we need to change the state of the system
@@ -127,9 +201,9 @@ void loop() {
         delay(1000);
 
         // Prompt
-        Serial.println("Prompting...");
-        
-        // Play message here
+        Serial.println("Prompting...");        
+        playFile("greeting.wav");
+        delay(300);
         beep_start_recording();
         system_mode = Mode::Recording;
       } else {
