@@ -103,7 +103,20 @@ void playFile(const char *filename)
   delay(5);
 
   // Simply wait for the file to finish playing.
-  while (sndGreeting.isPlaying()) {}
+  while (sndGreeting.isPlaying()) {
+    if (!is_phone_off_hook()) {
+      sndGreeting.stop();
+      break;
+    }
+  }
+}
+
+String get_system_mode() {
+  if (system_mode == Mode::Init) { return "Init"; }
+  if (system_mode == Mode::Ready) { return "Ready"; }
+  if (system_mode == Mode::Prompting) { return "Prompting"; }
+  if (system_mode == Mode::Recording) { return "Recording"; }
+  return "Unknown";
 }
 
 // ***********************************************************
@@ -163,9 +176,6 @@ String get_hook_status() {
   }
 }
 
-
-
-
 // ***********************************************************
 // * LOOP
 // ***********************************************************
@@ -199,6 +209,10 @@ void loop() {
       // Play the beep
       // Switch mode to recording
 
+      // We check via numerous if statements in this section because
+      // the user could hang up the phone in the middle of the prompt
+      // and in that case we want to stop and cancel the recording.
+
       if (is_phone_off_hook()) {      
         // Wait
         Serial.println("Waiting...");
@@ -206,10 +220,20 @@ void loop() {
 
         // Prompt
         Serial.println("Prompting...");        
-        playFile("greeting.wav");
+
+        if (is_phone_off_hook()) {
+          playFile("greeting.wav");          
+        }
+        
         delay(300);
-        beep_start_recording();
-        system_mode = Mode::Recording;
+
+        if (is_phone_off_hook()) {  
+          system_mode = Mode::Recording;
+        } else {
+          system_mode = Mode::Ready;
+        }
+
+        
       } else {
         system_mode = Mode::Ready;
       }
@@ -223,7 +247,9 @@ void loop() {
       // Switch mode back to ready
       
       if (is_phone_off_hook()) {       
-        
+        // Beep to indicate recording has started        
+        beep_start_recording();
+
         // Record until they hang up
         while(is_phone_off_hook() == true) {
           Serial.println("Recording...");
@@ -233,35 +259,13 @@ void loop() {
         Serial.println("Saving...");
         delay(50);
         beep_end_recording();
-        system_mode = Mode::Ready;
-      } else {
-        beep_end_recording();
-        system_mode = Mode::Ready;
       }
 
+      system_mode = Mode::Ready;
+
       break;
-  }
-  
-  // Check the state of the system
-
-  // User picks up receiver
-  //  - Wait 1 second
-  //  - Play prompt wav file
-  //  - Check if the phone is still off the hook
-  //  - Play a beep
-  //  - Wait until the receiver is put back on hook
-  //  - Write the file to the SD card?
-
-  // The button does different things depending on the current state of the machine
-  // So we need to track and check the state    
-  
+  }  
 }
 
-String get_system_mode() {
-  if (system_mode == Mode::Init) { return "Init"; }
-  if (system_mode == Mode::Ready) { return "Ready"; }
-  if (system_mode == Mode::Prompting) { return "Prompting"; }
-  if (system_mode == Mode::Recording) { return "Recording"; }
-  return "Unknown";
-}
+
 
