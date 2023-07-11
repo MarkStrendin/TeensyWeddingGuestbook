@@ -40,6 +40,8 @@
 #define SDCARD_MOSI_PIN  7
 #define SDCARD_SCK_PIN   14
 
+// How many milliseconds should we wait between picking up the receiver and starting the prompt playback
+#define PRE_PROMPT_DELAY 700
 
 // ***********************************************************
 // * Globals
@@ -227,7 +229,7 @@ void loop() {
         system_mode = Mode::Prompting;
         // Wait a second or so to give time to put the phone receiver to your head
         Serial.println("Waiting...");
-        //delay(1500);
+        delay(PRE_PROMPT_DELAY);
       }
       break;
 
