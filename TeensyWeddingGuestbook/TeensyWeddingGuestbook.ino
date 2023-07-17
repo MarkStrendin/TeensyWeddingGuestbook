@@ -7,6 +7,8 @@
 // audacity files don't seem to work
 // https://cloudconvert.com/mp3-to-wav
 // Files must be pcm16 and  44100Hz or they will not play
+//
+// The greeting sound clip should be named "greeting.wav" EXACTLY (all lower case too)
 
 // Includes
 #include <Audio.h>
@@ -33,6 +35,8 @@
 #define BEEP_VOLUME 0.1
 
 #define BEEP_FREQUENCY 825
+#define BEEP_ERROR_FREQUENCY_1 420
+#define BEEP_ERROR_FREQUENCY_2 840
 
 // Which pins to use for SDCard bits
 // You probably don't want to mess with these
@@ -46,10 +50,15 @@
 // How many samples to store in the queue
 #define NBLOX 16 
 
+// Mic gain - how sensitive should the mic be
+// I tested a lot of numbers, and this sounded the best with 
+// the hardware I have.
+#define MIC_GAIN 25
+
 // ***********************************************************
 // * Globals
 // ***********************************************************
-enum Mode {Init, Ready, Prompting, Recording};
+enum Mode {Init, Ready, Prompting, Recording, Unknown};
 Mode system_mode = Mode::Init;
 
 AudioControlSGTL5000 audio_shield_board;
@@ -94,9 +103,6 @@ AudioConnection patchCord_wavfile_to_mixer(sndWavFilePlayer, 0, audioMixer, 1);
 // Hook the input queue into the mic
 AudioConnection patchCord_mic_to_inputqueue(mic_jack, 0, recordQueue, 0);
 
-// DEBUG: Listen to the mic
-AudioConnection patchCord_mic_to_speakers_l(mic_jack, 0, audioMixer, 2);
-AudioConnection patchCord_mic_to_speakers_r(mic_jack, 1, audioMixer, 3);
 
 // ***********************************************************
 // * Functions
@@ -126,6 +132,17 @@ void beep_end_recording() {
     sndWaveFormCreator.amplitude(0);  
     delay(75);
   }
+}
+
+// Play a beep to indicate an error condition
+void beep_error_condition() {
+  for(int x=0;x<3;x++) {
+    sndWaveFormCreator.begin(BEEP_VOLUME, BEEP_ERROR_FREQUENCY_1, WAVEFORM_SINE);
+    delay(500);
+    sndWaveFormCreator.begin(BEEP_VOLUME, BEEP_ERROR_FREQUENCY_2, WAVEFORM_SINE);
+    delay(500);
+  }
+    sndWaveFormCreator.amplitude(0);  
 }
 
 // Play an arbitrary wav file
@@ -169,65 +186,6 @@ void MTPDeviceChecks_Enable() {
 void MTPDeviceChecks_Disable() {
     //MTP.storage()->set_DeltaDeviceCheckTimeMS((uint32_t) -1);
     Serial.println("MTP Device Checks DISABLED");
-}
-
-// ***********************************************************
-// * Setup
-// ***********************************************************
-void setup() {
-  Serial.begin(9600);  
-  system_mode = Mode::Init;
-  
-  // Set up indictor LED
-  pinMode(LED_PIN, OUTPUT);
-
-  // allocate some memory for the audio system
-  // https://www.pjrc.com/teensy/td_libs_AudioConnection.html
-  // This number is memory blocks, each which holds 128 audio samples, or approx 2.9ms of sound
-  AudioMemory(60);
-  
-  // Set the volume on the mixer inputs to max
-  audioMixer.gain(0, 1.0f);
-  audioMixer.gain(1, 1.0f);
-  audioMixer.gain(2, 1.0f);
-  audioMixer.gain(3, 1.0f);
-
-  // Set the mic volume gain
-  audio_shield_board.micGain(5);
-
-  audio_shield_board.enable();
-  audio_shield_board.inputSelect(AUDIO_INPUT_LINEIN); //AUDIO_INPUT_MIC, AUDIO_INPUT_LINEIN
-  audio_shield_board.lineInLevel(15);
-  //audio_shield_board.adcHighPassFilterDisable();
-  audio_shield_board.volume(AUDIO_OUTPUT_VOLUME);
-
-  // Set up on-hook button
-  pinMode(HOOK_BUTTON_PIN, INPUT_PULLUP);
-
-
-  // Set up SD card
-  SPI.setMOSI(SDCARD_MOSI_PIN);
-  SPI.setSCK(SDCARD_SCK_PIN);
-  if (!(SD.begin(SDCARD_CS_PIN))) 
-  {    
-    while (1) {
-      Serial.println("Unable to access the SD card");
-      delay(500);
-    }
-  } else {
-    Serial.println("SD card correctly initialized");    
-  } 
-
-  //MTP.begin();
-  //MTP.addFilesystem(SD, "TeensyGuestBook");
-  //Serial.println("Added SD card via MTP");
-  //MTPcheckInterval = MTP.storage()->get_DeltaDeviceCheckTimeMS();
-
-  // AUDIO_BLOCK_SAMPLES should be set to 128 (outside this code)
-  Serial.printf("Audio block set to %d samples\n",AUDIO_BLOCK_SAMPLES);
-
-  // Set system to Ready
-  system_mode = Mode::Ready;
 }
 
 String get_hook_status() {
@@ -302,13 +260,65 @@ void writeOutHeader(File recordedFile, long bytesSaved) {
 }
 
 // ***********************************************************
+// * Setup
+// ***********************************************************
+void setup() {
+  Serial.begin(9600);  
+  audio_shield_board.enable();
+  system_mode = Mode::Init;
+  
+  // Set up indictor LED
+  pinMode(LED_PIN, OUTPUT);
+
+  // allocate some memory for the audio system
+  // https://www.pjrc.com/teensy/td_libs_AudioConnection.html
+  // This number is memory blocks, each which holds 128 audio samples, or approx 2.9ms of sound
+  AudioMemory(60);
+  
+  // Set the volume on the mixer inputs to max
+  audioMixer.gain(0, 1.0f);
+  audioMixer.gain(1, 1.0f);
+
+  // Set mic input and gain
+  audio_shield_board.inputSelect(AUDIO_INPUT_MIC); //AUDIO_INPUT_MIC, AUDIO_INPUT_LINEIN  
+  audio_shield_board.micGain(MIC_GAIN);  
+
+  // Set output volume
+  audio_shield_board.volume(AUDIO_OUTPUT_VOLUME);
+
+  // Set up on-hook button
+  pinMode(HOOK_BUTTON_PIN, INPUT_PULLUP);
+
+  // Set up SD card
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  if (!(SD.begin(SDCARD_CS_PIN))) 
+  {    
+    while (1) {
+      Serial.println("Unable to access the SD card");
+      beep_error_condition();
+    }
+  } else {
+    Serial.println("SD card correctly initialized");    
+  } 
+
+  //MTP.begin();
+  //MTP.addFilesystem(SD, "TeensyGuestBook");
+  //Serial.println("Added SD card via MTP");
+  //MTPcheckInterval = MTP.storage()->get_DeltaDeviceCheckTimeMS();
+
+  // Set system to Ready
+  system_mode = Mode::Ready;
+}
+
+// ***********************************************************
 // * LOOP
 // ***********************************************************
 
+
+Mode last_seen_mode = Mode::Unknown;
 void loop() {  
-  // See if we need to change the state of the system
-  //Serial.println(get_system_mode() + " : " + get_hook_status());
-  
+
   switch(system_mode) {
     case Mode::Init: 
       break;
@@ -452,9 +462,6 @@ void loop() {
         // Beep to indicate we're done
         delay(50);
         beep_end_recording();
-
-        // DEBUG: Play the recorded file back        
-        playFile(filename);  
 
       }
 
