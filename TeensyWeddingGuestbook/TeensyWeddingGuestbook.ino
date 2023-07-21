@@ -48,10 +48,10 @@
 #define PRE_PROMPT_DELAY 700
 
 // How many samples to store in the queue
-#define NBLOX 16 
+#define NBLOX 16
 
 // Mic gain - how sensitive should the mic be
-// I tested a lot of numbers, and this sounded the best with 
+// I tested a lot of numbers, and this sounded the best with
 // the hardware I have.
 #define MIC_GAIN 25
 
@@ -129,7 +129,7 @@ void beep_end_recording() {
   for(int x=0;x<3;x++) {
     sndWaveFormCreator.begin(BEEP_VOLUME, BEEP_FREQUENCY, WAVEFORM_SINE);
     delay(75);
-    sndWaveFormCreator.amplitude(0);  
+    sndWaveFormCreator.amplitude(0);
     delay(75);
   }
 }
@@ -142,7 +142,7 @@ void beep_error_condition() {
     sndWaveFormCreator.begin(BEEP_VOLUME, BEEP_ERROR_FREQUENCY_2, WAVEFORM_SINE);
     delay(500);
   }
-    sndWaveFormCreator.amplitude(0);  
+    sndWaveFormCreator.amplitude(0);
 }
 
 // Play an arbitrary wav file
@@ -197,7 +197,7 @@ String get_hook_status() {
 }
 
 // update WAV header with final filesize/datasize
-void writeOutHeader(File recordedFile, long bytesSaved) { 
+void writeOutHeader(File recordedFile, long bytesSaved) {
   unsigned long ChunkSize = 0L;
   unsigned long Subchunk1Size = 16;
   unsigned int AudioFormat = 1;
@@ -216,57 +216,57 @@ void writeOutHeader(File recordedFile, long bytesSaved) {
   byte1 = ChunkSize & 0xff;
   byte2 = (ChunkSize >> 8) & 0xff;
   byte3 = (ChunkSize >> 16) & 0xff;
-  byte4 = (ChunkSize >> 24) & 0xff;  
+  byte4 = (ChunkSize >> 24) & 0xff;
   recordedFile.write(byte1);  recordedFile.write(byte2);  recordedFile.write(byte3);  recordedFile.write(byte4);
   recordedFile.write("WAVE");
   recordedFile.write("fmt ");
   byte1 = Subchunk1Size & 0xff;
   byte2 = (Subchunk1Size >> 8) & 0xff;
   byte3 = (Subchunk1Size >> 16) & 0xff;
-  byte4 = (Subchunk1Size >> 24) & 0xff;  
+  byte4 = (Subchunk1Size >> 24) & 0xff;
   recordedFile.write(byte1);  recordedFile.write(byte2);  recordedFile.write(byte3);  recordedFile.write(byte4);
   byte1 = AudioFormat & 0xff;
   byte2 = (AudioFormat >> 8) & 0xff;
-  recordedFile.write(byte1);  recordedFile.write(byte2); 
+  recordedFile.write(byte1);  recordedFile.write(byte2);
   byte1 = numChannels & 0xff;
   byte2 = (numChannels >> 8) & 0xff;
-  recordedFile.write(byte1);  recordedFile.write(byte2); 
+  recordedFile.write(byte1);  recordedFile.write(byte2);
   byte1 = sampleRate & 0xff;
   byte2 = (sampleRate >> 8) & 0xff;
   byte3 = (sampleRate >> 16) & 0xff;
-  byte4 = (sampleRate >> 24) & 0xff;  
+  byte4 = (sampleRate >> 24) & 0xff;
   recordedFile.write(byte1);  recordedFile.write(byte2);  recordedFile.write(byte3);  recordedFile.write(byte4);
   byte1 = byteRate & 0xff;
   byte2 = (byteRate >> 8) & 0xff;
   byte3 = (byteRate >> 16) & 0xff;
-  byte4 = (byteRate >> 24) & 0xff;  
+  byte4 = (byteRate >> 24) & 0xff;
   recordedFile.write(byte1);  recordedFile.write(byte2);  recordedFile.write(byte3);  recordedFile.write(byte4);
   byte1 = blockAlign & 0xff;
   byte2 = (blockAlign >> 8) & 0xff;
-  recordedFile.write(byte1);  recordedFile.write(byte2); 
+  recordedFile.write(byte1);  recordedFile.write(byte2);
   byte1 = bitsPerSample & 0xff;
   byte2 = (bitsPerSample >> 8) & 0xff;
-  recordedFile.write(byte1);  recordedFile.write(byte2); 
+  recordedFile.write(byte1);  recordedFile.write(byte2);
   recordedFile.write("data");
   byte1 = Subchunk2Size & 0xff;
   byte2 = (Subchunk2Size >> 8) & 0xff;
   byte3 = (Subchunk2Size >> 16) & 0xff;
-  byte4 = (Subchunk2Size >> 24) & 0xff;  
+  byte4 = (Subchunk2Size >> 24) & 0xff;
   recordedFile.write(byte1);  recordedFile.write(byte2);  recordedFile.write(byte3);  recordedFile.write(byte4);
   recordedFile.close();
-  Serial.println("header written"); 
-  Serial.print("Subchunk2: "); 
-  Serial.println(Subchunk2Size); 
+  //Serial.println("header written");
+  //Serial.print("Subchunk2: ");
+  //Serial.println(Subchunk2Size);
 }
 
 // ***********************************************************
 // * Setup
 // ***********************************************************
 void setup() {
-  Serial.begin(9600);  
+  Serial.begin(9600);
   audio_shield_board.enable();
   system_mode = Mode::Init;
-  
+
   // Set up indictor LED
   pinMode(LED_PIN, OUTPUT);
 
@@ -274,14 +274,14 @@ void setup() {
   // https://www.pjrc.com/teensy/td_libs_AudioConnection.html
   // This number is memory blocks, each which holds 128 audio samples, or approx 2.9ms of sound
   AudioMemory(60);
-  
+
   // Set the volume on the mixer inputs to max
   audioMixer.gain(0, 1.0f);
   audioMixer.gain(1, 1.0f);
 
   // Set mic input and gain
-  audio_shield_board.inputSelect(AUDIO_INPUT_MIC); //AUDIO_INPUT_MIC, AUDIO_INPUT_LINEIN  
-  audio_shield_board.micGain(MIC_GAIN);  
+  audio_shield_board.inputSelect(AUDIO_INPUT_MIC); //AUDIO_INPUT_MIC, AUDIO_INPUT_LINEIN
+  audio_shield_board.micGain(MIC_GAIN);
 
   // Set output volume
   audio_shield_board.volume(AUDIO_OUTPUT_VOLUME);
@@ -292,15 +292,15 @@ void setup() {
   // Set up SD card
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
-  if (!(SD.begin(SDCARD_CS_PIN))) 
-  {    
+  if (!(SD.begin(SDCARD_CS_PIN)))
+  {
     while (1) {
       Serial.println("Unable to access the SD card");
       beep_error_condition();
     }
   } else {
-    Serial.println("SD card correctly initialized");    
-  } 
+    Serial.println("SD card correctly initialized");
+  }
 
   //MTP.begin();
   //MTP.addFilesystem(SD, "TeensyGuestBook");
@@ -317,14 +317,14 @@ void setup() {
 
 
 Mode last_seen_mode = Mode::Unknown;
-void loop() {  
+void loop() {
 
   switch(system_mode) {
-    case Mode::Init: 
+    case Mode::Init:
       break;
 
     // ****************************************************** READY
-    case Mode::Ready: 
+    case Mode::Ready:
       // If the user takes the receiver off hook start recording mode
       // That's it for now
       // If we add a playback button, check for that button here too
@@ -348,40 +348,40 @@ void loop() {
       // the user could hang up the phone in the middle of the prompt
       // and in that case we want to stop and cancel the recording.
 
-      if (is_phone_off_hook()) {      
+      if (is_phone_off_hook()) {
         // Wait
         Serial.println("Waiting...");
         delay(1000);
 
         // Prompt
-        Serial.println("Prompting...");        
+        Serial.println("Prompting...");
 
         if (is_phone_off_hook()) {
-          playFile("greeting.wav");          
+          playFile("greeting.wav");
         }
-        
+
         delay(300);
 
-        if (is_phone_off_hook()) {  
+        if (is_phone_off_hook()) {
           system_mode = Mode::Recording;
         } else {
           system_mode = Mode::Ready;
-        }        
+        }
       } else {
         system_mode = Mode::Ready;
       }
 
       break;
-    
+
     // ****************************************************** RECORDING
-    case Mode::Recording:    
+    case Mode::Recording:
       // Check if we're still off hook. If the receiver was hung up, do nothing.
       // Record anything input in the mic
-      // When the handset goes back on hook, stop recording      
+      // When the handset goes back on hook, stop recording
       // Switch mode back to ready
-      
-      if (is_phone_off_hook()) {       
-        // Beep to indicate recording has started        
+
+      if (is_phone_off_hook()) {
+        // Beep to indicate recording has started
         beep_start_recording();
 
         // Pre-recording setup
@@ -391,10 +391,10 @@ void loop() {
         Serial.print("Finding an available filename... ");
 
         char filename[15];
-        for (uint16_t filenum=0; filenum<=999; filenum++) {          
+        for (uint16_t filenum=0; filenum<=999; filenum++) {
           snprintf(filename, 11, " %05d.wav", filenum);
           if (!SD.exists(filename)) { break; }
-        }        
+        }
         Serial.println(filename);
 
         // Create a new file to record into
@@ -409,7 +409,7 @@ void loop() {
 
         // Record until they hang up
         Serial.println("Recording...");
-        
+
         // Check to make sure the file opened successfully
         // Maybe make some beep codes if something broke
 
@@ -419,26 +419,26 @@ void loop() {
 
           // If the recording queue has data in it, dump it to the file
           if (recordQueue.available() >= NBLOX) {
-            byte buffer[NBLOX*AUDIO_BLOCK_SAMPLES*sizeof(int16_t)];            
+            byte buffer[NBLOX*AUDIO_BLOCK_SAMPLES*sizeof(int16_t)];
 
             for (int i=0;i<NBLOX;i++)
             {
               memcpy(buffer+i*AUDIO_BLOCK_SAMPLES*sizeof(int16_t), recordQueue.readBuffer(), AUDIO_BLOCK_SAMPLES*sizeof(int16_t));
-              
+
               recordQueue.freeBuffer();
             }
 
             // Write 512 bytes to the file
             recorded_file.write(buffer, sizeof buffer);
             recordedBytesSaved += sizeof buffer;
-          }        
+          }
         }
 
         // **********************
         // Finished recording
         // **********************
 
-        // Post-recording setup        
+        // Post-recording setup
         Serial.println("Saving...");
 
         // Stop the recording queue
@@ -454,7 +454,7 @@ void loop() {
         // Write file header here
         writeOutHeader(recorded_file, recordedBytesSaved);
 
-        // Close and save the file        
+        // Close and save the file
         recorded_file.close();
 
         MTPDeviceChecks_Enable();
@@ -469,8 +469,8 @@ void loop() {
       system_mode = Mode::Ready;
 
       break;
-    
-  }  
+
+  }
 }
 
 
