@@ -55,6 +55,9 @@
 // the hardware I have.
 #define MIC_GAIN 25
 
+// How many milliseconds to wait for the user to put the phone to their head
+#define PRE_GREETING_DELAY 750
+
 // ***********************************************************
 // * Globals
 // ***********************************************************
@@ -351,7 +354,7 @@ void loop() {
       if (is_phone_off_hook()) {
         // Wait
         Serial.println("Waiting...");
-        delay(1000);
+        delay(PRE_GREETING_DELAY);
 
         // Prompt
         Serial.println("Prompting...");
