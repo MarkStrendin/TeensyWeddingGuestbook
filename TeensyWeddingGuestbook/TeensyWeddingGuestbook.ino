@@ -53,7 +53,8 @@
 // Mic gain - how sensitive should the mic be
 // I tested a lot of numbers, and this sounded the best with
 // the hardware I have.
-#define MIC_GAIN 25
+// Was: 25
+#define MIC_GAIN 30
 
 // How many milliseconds to wait for the user to put the phone to their head
 #define PRE_GREETING_DELAY 750
